@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log*
+.git
+.gitignore
+.github
+docs
+test
+data
+votes.json
+votes.json.tmp
+*.md
+!README.md

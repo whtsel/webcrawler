@@ -1,0 +1,33 @@
+# Render blueprint — free HTTPS in about five minutes.
+#
+# Deploy: render.com → New + → Blueprint → pick this repository.
+# Render reads this file, builds the Dockerfile and gives you
+# https://<name>.onrender.com — that URL goes into the app (§5 of the handoff).
+#
+# Caveat: the free plan has an ephemeral filesystem. Votes survive while the
+# instance lives but are lost on redeploy/restart. To keep them, upgrade the
+# service and attach a disk mounted at /data (then this file needs the `disk:`
+# block below uncommented).
+services:
+  - type: web
+    name: bbx-vote-server
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: BBX_VOTES_FILE
+        value: /data/votes.json
+      # Fixed HMAC key so a client's token stays valid across restarts.
+      - key: BBX_VOTES_TOKEN_KEY
+        generateValue: true
+      # Uncomment for a private deployment: clients must send x-bbx-key.
+      # - key: BBX_VOTES_SECRET
+      #   sync: false
+
+    # Paid plans only — persistent votes.
+    # disk:
+    #   name: bbx-votes
+    #   mountPath: /data
+    #   sizeGB: 1

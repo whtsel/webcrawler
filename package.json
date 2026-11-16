@@ -1,0 +1,18 @@
+{
+  "name": "bbx-vote-server",
+  "version": "75.0.0",
+  "private": true,
+  "description": "BlackBox Stream v75 shared source-vote server — one file, no dependencies",
+  "type": "module",
+  "main": "server/bbx-vote-server.mjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server/bbx-vote-server.mjs",
+    "test": "node test/smoke.mjs",
+    "verify": "node test/verify-source.mjs",
+    "check": "npm run verify && npm test"
+  },
+  "license": "UNLICENSED"
+}

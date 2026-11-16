@@ -1,0 +1,19 @@
+# Local run: docker compose up --build
+# Then: curl -s localhost:8787/health
+services:
+  votes:
+    build: .
+    container_name: bbx-vote-server
+    ports:
+      - "8787:8787"
+    environment:
+      PORT: "8787"
+      HOST: "0.0.0.0"
+      BBX_VOTES_FILE: /data/votes.json
+      # Optional: keep tokens valid across restarts.
+      # BBX_VOTES_TOKEN_KEY: change-me-to-a-long-random-string
+      # Optional: require x-bbx-key on every request.
+      # BBX_VOTES_SECRET: change-me
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
