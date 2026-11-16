@@ -1,0 +1,17 @@
+# runtime state — never commit votes
+votes.json
+votes.json.tmp
+data/
+
+# node
+node_modules/
+npm-debug.log*
+
+# local env
+.env
+.env.*
+
+# editor / os
+.DS_Store
+Thumbs.db
+*.swp

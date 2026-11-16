@@ -1,0 +1,77 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Server file is byte-identical to BlackBox Stream v75
+        run: node test/verify-source.mjs
+
+      - name: Smoke test the real server
+        run: node test/smoke.mjs
+
+  docker:
+    name: docker image runs and answers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t bbx-vote-server:ci .
+
+      - name: Run container and probe it
+        run: |
+          set -euo pipefail
+          docker run -d --name bbx -p 8787:8080 \
+            -e PORT=8080 \
+            -e BBX_VOTES_TOKEN_KEY=ci-token-key \
+            bbx-vote-server:ci
+
+          ok=0
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8787/health; then ok=1; break; fi
+            sleep 1
+          done
+
+          echo
+          if [ "$ok" != "1" ]; then
+            echo "container never answered /health"
+            docker logs bbx
+            exit 1
+          fi
+
+          # A full round trip through the container: token, vote, batch read.
+          TOKEN=$(curl -fsS -X POST http://127.0.0.1:8787/token \
+            -H 'content-type: application/json' \
+            -d '{"voter":"ci-device-0001"}' | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).token))")
+
+          curl -fsS -X POST http://127.0.0.1:8787/vote \
+            -H 'content-type: application/json' \
+            -d "{\"key\":\"btih:0123456789abcdef0123456789abcdef01234567\",\"dir\":1,\"voter\":\"ci-device-0001\",\"token\":\"$TOKEN\"}"
+          echo
+
+          curl -fsS "http://127.0.0.1:8787/votes?keys=btih:0123456789abcdef0123456789abcdef01234567"
+          echo
+
+          docker logs bbx
+          docker rm -f bbx

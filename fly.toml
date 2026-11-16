@@ -1,0 +1,44 @@
+# Fly.io deployment for the BlackBox Stream vote server.
+#
+# Fly is the recommended host when you want votes to survive restarts: the
+# volume below keeps /data across deploys and machine restarts, and TLS is
+# automatic (the app needs HTTPS).
+#
+# First deploy:
+#   fly launch --no-deploy --copy-config --name bbx-vote-server
+#   fly volumes create bbx_votes --size 1 --region jnb
+#   fly secrets set BBX_VOTES_TOKEN_KEY="$(head -c 32 /dev/urandom | base64 | tr -d '/+=' | head -c 40)"
+#   fly deploy
+#
+# `fly launch` rewrites the app name if it is taken — keep whatever it picks.
+
+app = "bbx-vote-server"
+primary_region = "jnb"          # Johannesburg — nearest Fly region to Ghana
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  BBX_VOTES_FILE = "/data/votes.json"
+
+# Votes live here. Without a volume they vanish on every redeploy.
+[[mounts]]
+  source = "bbx_votes"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # The app tolerates a cold server, but a warm one means the ★ Recommended
+  # badge is right on the first paint. Keep one machine up.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
